@@ -20,7 +20,7 @@ const options = {};
 
 describe('Admin: article', () => {
   beforeEach(() => {
-    cy.wordpressSession(username, password, { options });
+    cy.wordpressSession(username, password, options);
   });
 
   it('does something in wordpress', () => {
