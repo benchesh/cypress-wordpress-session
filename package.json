@@ -1,0 +1,18 @@
+{
+  "name": "cypress-wordpress-session",
+  "version": "0.0.2",
+  "description": "Restore a Wordpress session in Cypress by automatically saving Wordpress login cookies",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ben Cheshire",
+  "peerDependencies": {
+    "cypress": "^12.x"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benchesh/cypress-wordpress-session.git"
+  }
+}
