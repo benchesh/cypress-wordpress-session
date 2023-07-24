@@ -47,3 +47,4 @@ The only required parameters are `username` and `password`.
 | `verboseLogging`  | boolean | false                           | Enable verbose logging                                                                                                 |
 | `landingPage`     | string  | `/wp-admin`                     | The page to land on once logged in or once the session has been restored. Can be set to a falsy value to prevent this. |
 | `obscurePassword` | boolean | true                            | Hide the password from the session parameters, thus preventing it from being easily viewable in the Cypress GUI        |
+| `sessionOptions`  | object  | { cacheAcrossSpecs: true }      | Cypress session options (see [Cypress docs](https://docs.cypress.io/api/commands/session))                             |

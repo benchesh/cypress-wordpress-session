@@ -3,6 +3,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     verboseLogging,
     landingPage = '/wp-admin',
     obscurePassword = true,
+    sessionOptions = { cacheAcrossSpecs: true }
 }) => {
     if (!username) {
         throw new Error('cypress-wordpress-session: No username supplied!')
@@ -101,7 +102,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 }
             });
         });
-    });
+    }, sessionOptions);
 
     if (landingPage) {
         cy.visit(landingPage);
