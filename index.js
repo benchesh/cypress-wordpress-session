@@ -21,10 +21,12 @@ Cypress.Commands.add('wordpressSession', (username, password, {
         obscurePassword ? password.replace(/./g, '*') : password
     ], () => {
         cy.exec(`[ -f ${cookiesFilepath} ] && echo "Cookie file found"`, { failOnNonZeroExit: false }).then((res) => {
-            if (res.stdout === 'Cookie file found') {
+            if (res.stdout !== 'Cookie file found') {
+                verboseLogging && cy.log('cypress-wordpress-session: Wordpress cookie file not found...');
+            } else {
                 cookiesFilepathExists = true;
 
-                verboseLogging && cy.log('cypress-wordpress-session: Wordpress cookie file found');
+                verboseLogging && cy.log('cypress-wordpress-session: Wordpress cookie file found!');
 
                 cy.readFile(cookiesFilepath).then((arr) => {
                     savedLoginCookies = arr;
@@ -48,6 +50,10 @@ Cypress.Commands.add('wordpressSession', (username, password, {
             if (url.includes('/wp-admin')) {
                 verboseLogging && cy.log('cypress-wordpress-session: Wordpress session restored successfully');
             } else if (url.includes('/wp-login')) {
+                if (cookiesFilepathExists) {
+                    verboseLogging && cy.log('cypress-wordpress-session: Session restoration unsuccessful!');
+                }
+
                 verboseLogging && cy.log('cypress-wordpress-session: Logging in to wordpress...');
 
                 cy.wait(500); // make sure input box is loaded before we type. TODO: improve this
@@ -93,9 +99,9 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
                         if (verboseLogging) {
                             if (cookiesFilepathExists) {
-                                cy.log('cypress-wordpress-session: Updaated Wordpress cookies file');
+                                cy.log('cypress-wordpress-session: Updated Wordpress cookies file.');
                             } else {
-                                cy.log('cypress-wordpress-session: Saved new Wordpress cookies file');
+                                cy.log('cypress-wordpress-session: Saved new Wordpress cookies file.');
                             }
                         }
                     }
