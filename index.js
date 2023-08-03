@@ -20,28 +20,40 @@ Cypress.Commands.add('wordpressSession', (username, password, {
         username,
         obscurePassword ? password.replace(/./g, '*') : password
     ], () => {
-        cy.exec(`[ -f ${cookiesFilepath} ] && echo "Cookie file found"`, { failOnNonZeroExit: false }).then((res) => {
-            if (res.stdout !== 'Cookie file found') {
+        cy.exec(`echo stdout && [ -f ${cookiesFilepath} ] && echo "Cookie file found"`, { failOnNonZeroExit: false }).then((res) => {
+            if (!res.stdout.includes('stdout')) {// if stdout doesn't work, we'll need an alternative method to check the file exists
+                cy.writeFile(cookiesFilepath, '', { flag: 'a+' });// ensures cy.readFile won't crash
+            } else if (!res.stdout.includes('Cookie file found')) {
                 verboseLogging && cy.log('cypress-wordpress-session: Wordpress cookie file not found...');
-            } else {
+
+                return;
+            }
+
+            cy.readFile(
+                cookiesFilepath,
+                null//read the file as a buffer, otherwise it will run parse it as if it were JSON, which will cause a crash if it's empty
+            ).then((file) => {
+                if (!file.length) {// file is empty; act as if it doesn't exist!
+                    verboseLogging && cy.log('cypress-wordpress-session: Wordpress cookie file not found...');
+                    return;
+                }
+
                 cookiesFilepathExists = true;
 
                 verboseLogging && cy.log('cypress-wordpress-session: Wordpress cookie file found!');
 
-                cy.readFile(cookiesFilepath).then((arr) => {
-                    savedLoginCookies = arr;
+                savedLoginCookies = JSON.parse(file);
 
-                    arr.forEach((cookie) => {
-                        const {
-                            name, value, domain, httpOnly, path, secure,
-                        } = cookie;
+                savedLoginCookies.forEach((cookie) => {
+                    const {
+                        name, value, domain, httpOnly, path, secure,
+                    } = cookie;
 
-                        cy.setCookie(name, value, {
-                            domain, httpOnly, path, secure,
-                        });
+                    cy.setCookie(name, value, {
+                        domain, httpOnly, path, secure,
                     });
                 });
-            }
+            });
         });
 
         cy.visit('/wp-admin');
