@@ -33,11 +33,11 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
                     arr.forEach((cookie) => {
                         const {
-                            name, value, domain, httpOnly, secure,
+                            name, value, domain, httpOnly, path, secure,
                         } = cookie;
 
                         cy.setCookie(name, value, {
-                            domain, httpOnly, secure, path: '/wp-admin',
+                            domain, httpOnly, path, secure,
                         });
                     });
                 });
@@ -57,8 +57,8 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 verboseLogging && cy.log('cypress-wordpress-session: Logging in to wordpress...');
 
                 cy.wait(500); // make sure input box is loaded before we type. TODO: improve this
-                cy.get('input[name=log]').should('exist').type(username, { delay: 0 });
-                cy.get('input[name=pwd]').should('exist').type(`${password}{enter}`, { delay: 0 });
+                cy.get('input[name=log]').should('exist').clear().type(username, { delay: 0 });
+                cy.get('input[name=pwd]').should('exist').clear().type(`${password}{enter}`, { delay: 0 });
                 cy.get('body').then(($body) => {
                     if ($body.find('#login_error').length) {
                         throw new Error('cypress-wordpress-session: Wordpress login credentials are incorrect!');
@@ -71,7 +71,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
         cy.url().should('include', '/wp-admin').then(() => {
             cy.getAllCookies().then((cookies) => {
-                const browserLoginCookies = cookies.filter((cookie) => cookie.name.startsWith('wordpress_sec'));
+                const browserLoginCookies = cookies.filter((cookie) => cookie.name.startsWith('wordpress_'));
 
                 if (browserLoginCookies) {
                     const allLoginCookies = browserLoginCookies.concat(savedLoginCookies).map((cookie) => {
@@ -89,9 +89,13 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                     const uniqueLoginCookies = [];
 
                     uniqueDomains.forEach((domain) => {
-                        uniqueLoginCookies.push(
-                            allLoginCookies.find((cookie) => cookie.domain === domain),
-                        );
+                        const allCookiesForDomain = allLoginCookies.filter((cookie) => cookie.domain === domain)
+
+                        allCookiesForDomain.forEach((cookie) => {
+                            if (!uniqueLoginCookies.find((uCookie) => uCookie.name === cookie.name)) {
+                                uniqueLoginCookies.push(cookie);
+                            }
+                        });
                     });
 
                     if (JSON.stringify(uniqueLoginCookies) !== JSON.stringify(savedLoginCookies)) {
