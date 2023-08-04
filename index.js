@@ -5,12 +5,22 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     obscurePassword = true,
     sessionOptions = { cacheAcrossSpecs: true }
 }) => {
+    const cwsLog = (str) => {
+        if (verboseLogging) {
+            cy.log(`cypress-wordpress-session: ${str}`);
+        }
+    }
+
+    const cwsErr = (str) => {
+        throw new Error(`cypress-wordpress-session ERROR: ${str}`)
+    }
+
     if (!username) {
-        throw new Error('cypress-wordpress-session: No username supplied!')
+        cwsErr('No username supplied!')
     }
 
     if (!password) {
-        throw new Error('cypress-wordpress-session: No password supplied!')
+        cwsErr('No password supplied!')
     }
 
     let savedLoginCookies = [];
@@ -24,7 +34,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
             if (!res.stdout.includes('stdout')) {// if stdout doesn't work, we'll need an alternative method to check the file exists
                 cy.writeFile(cookiesFilepath, '', { flag: 'a+' });// ensures cy.readFile won't crash
             } else if (!res.stdout.includes('Cookie file found')) {
-                verboseLogging && cy.log('cypress-wordpress-session: Wordpress cookie file not found...');
+                cwsLog('Wordpress cookie file not found...');
 
                 return;
             }
@@ -34,13 +44,13 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 null//read the file as a buffer, otherwise it will run parse it as if it were JSON, which will cause a crash if it's empty
             ).then((file) => {
                 if (!file.length) {// file is empty; act as if it doesn't exist!
-                    verboseLogging && cy.log('cypress-wordpress-session: Wordpress cookie file not found...');
+                    cwsLog('Wordpress cookie file not found...');
                     return;
                 }
 
                 cookiesFilepathExists = true;
 
-                verboseLogging && cy.log('cypress-wordpress-session: Wordpress cookie file found!');
+                cwsLog('Wordpress cookie file found!');
 
                 savedLoginCookies = JSON.parse(file);
 
@@ -60,24 +70,24 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
         cy.url().then((url) => {
             if (url.includes('/wp-admin')) {
-                verboseLogging && cy.log('cypress-wordpress-session: Wordpress session restored successfully');
+                cwsLog('Wordpress session restored successfully!');
             } else if (url.includes('/wp-login')) {
                 if (cookiesFilepathExists) {
-                    verboseLogging && cy.log('cypress-wordpress-session: Session restoration unsuccessful!');
+                    cwsLog('Session restoration unsuccessful!');
                 }
 
-                verboseLogging && cy.log('cypress-wordpress-session: Logging in to wordpress...');
+                cwsLog('Logging in to wordpress...');
 
                 cy.wait(500); // make sure input box is loaded before we type. TODO: improve this
                 cy.get('input[name=log]').should('exist').clear().type(username, { delay: 0 });
                 cy.get('input[name=pwd]').should('exist').clear().type(`${password}{enter}`, { delay: 0 });
                 cy.get('body').then(($body) => {
                     if ($body.find('#login_error').length) {
-                        throw new Error('cypress-wordpress-session: Wordpress login credentials are incorrect!');
+                        cwsErr('Wordpress login credentials are incorrect!');
                     }
                 });
             } else {
-                throw new Error('cypress-wordpress-session: Wordpress login failed!');
+                cwsErr('Wordpress login failed!');
             }
         });
 
@@ -113,12 +123,10 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                     if (JSON.stringify(uniqueLoginCookies) !== JSON.stringify(savedLoginCookies)) {
                         cy.writeFile(cookiesFilepath, JSON.stringify(uniqueLoginCookies, null, 4));
 
-                        if (verboseLogging) {
-                            if (cookiesFilepathExists) {
-                                cy.log('cypress-wordpress-session: Updated Wordpress cookies file.');
-                            } else {
-                                cy.log('cypress-wordpress-session: Saved new Wordpress cookies file.');
-                            }
+                        if (cookiesFilepathExists) {
+                            cwsLog('Updated Wordpress cookies file.');
+                        } else {
+                            cwsLog('Saved new Wordpress cookies file.');
                         }
                     }
                 }
