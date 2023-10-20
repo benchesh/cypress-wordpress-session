@@ -136,5 +136,18 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
     if (landingPage) {
         cy.visit(landingPage);
+
+        const urlOrPathIsLoginPage = (urlOrPath) => {
+            return new URL(urlOrPath, 'http://test/').pathname.startsWith('/wp-login');
+        }
+
+        if (!urlOrPathIsLoginPage(landingPage)) {
+            cy.url().then((url) => {
+                if (urlOrPathIsLoginPage(url)) {
+                    cwsErr(`The session was not restored successfully, as your desired landing page ${landingPage} has instead sent you back to the login screen. The session will now be cleared!`);
+                    Cypress.session.clearAllSavedSessions();
+                }
+            });
+        }
     }
 });
