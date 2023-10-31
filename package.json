@@ -1,6 +1,6 @@
 {
   "name": "cypress-wordpress-session",
-  "version": "0.0.6",
+  "version": "1.0.0",
   "description": "Restore a Wordpress session in Cypress by automatically saving Wordpress login cookies",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "author": "Ben Cheshire",
   "peerDependencies": {
-    "cypress": "^12.x"
+    "cypress": ">=12"
   },
   "license": "MIT",
   "repository": {
