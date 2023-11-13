@@ -5,14 +5,19 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     obscurePassword = true,
     sessionOptions = { cacheAcrossSpecs: true }
 }) => {
+    const {
+        name: pkgName,
+        version: pkgVersion
+    } = require('./package.json');
+
     const cwsLog = (str) => {
         if (verboseLogging) {
-            cy.log(`cypress-wordpress-session: ${str}`);
+            cy.log(`${pkgName}: ${str}`);
         }
     }
 
     const cwsErr = (str) => {
-        throw new Error(`cypress-wordpress-session ERROR: ${str}`)
+        throw new Error(`${pkgName} ERROR: ${str}`)
     }
 
     if (!username) {
@@ -23,6 +28,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
         cwsErr('No password supplied!')
     }
 
+    let fullJson = {};
     let savedLoginCookies = [];
     let cookiesFilepathExists = false;
 
@@ -44,15 +50,31 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 null//read the file as a buffer, otherwise it will run parse it as if it were JSON, which will cause a crash if it's empty
             ).then((file) => {
                 if (!file.length) {// file is empty; act as if it doesn't exist!
-                    cwsLog('Wordpress cookie file not found...');
+                    cwsLog(`Wordpress cookie file not found ("${cookiesFilepath}")...`);
                     return;
                 }
 
+                const thisJson = JSON.parse(file);
+
+                if (pkgVersion !== thisJson.pkgVersion) {
+                    cwsLog(`Wordpress cookie file found at "${cookiesFilepath}", but it's for a different version of ${pkgName}, so will be discarded!`);
+
+                    return;
+                }
+
+                fullJson = thisJson;
                 cookiesFilepathExists = true;
 
                 cwsLog('Wordpress cookie file found!');
 
-                savedLoginCookies = JSON.parse(file);
+                const thisJsonLoginCookies = fullJson.users?.[username] || [];
+
+                if (!thisJsonLoginCookies.length) {
+                    cwsLog(`No session found for user ${username}`);
+                    return;
+                }
+
+                savedLoginCookies = thisJsonLoginCookies;
 
                 savedLoginCookies.forEach((cookie) => {
                     const {
@@ -72,11 +94,11 @@ Cypress.Commands.add('wordpressSession', (username, password, {
             if (url.includes('/wp-admin')) {
                 cwsLog('Wordpress session restored successfully!');
             } else if (url.includes('/wp-login')) {
-                if (cookiesFilepathExists) {
+                if (savedLoginCookies) {
                     cwsLog('Session restoration unsuccessful!');
                 }
 
-                cwsLog('Logging in to wordpress...');
+                cwsLog(`Logging in to Wordpress as ${username}...`);
 
                 cy.wait(500); // make sure input box is loaded before we type. TODO: improve this
                 cy.get('input[name=log]').should('exist').clear().type(username, { delay: 0 });
@@ -121,12 +143,18 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                     });
 
                     if (JSON.stringify(uniqueLoginCookies) !== JSON.stringify(savedLoginCookies)) {
-                        cy.writeFile(cookiesFilepath, JSON.stringify(uniqueLoginCookies, null, 4));
+                        cy.writeFile(cookiesFilepath, JSON.stringify({
+                            pkgVersion,
+                            users: {
+                                ...fullJson.users,
+                                [username]: uniqueLoginCookies,
+                            },
+                        }, null, 4));
 
                         if (cookiesFilepathExists) {
-                            cwsLog('Updated Wordpress cookies file.');
+                            cwsLog(`Updated Wordpress cookies file at "${cookiesFilepath}".`);
                         } else {
-                            cwsLog('Saved new Wordpress cookies file.');
+                            cwsLog(`Saved new Wordpress cookies file at "${cookiesFilepath}".`);
                         }
                     }
                 }

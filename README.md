@@ -8,22 +8,24 @@ If the file exists, this module will access it to restore your session. If the f
 
 If you've already configured your Cypress project to navigate to Wordpress, you just need to import this module, supply login credentials and it'll handle the rest for you.
 
+Multiple users and domains are supported! Provided the login cookies are still valid, you can use this module to switch users between tests (or even within the same test) without going back to the login screen.
+
 For example:
 
 ```javascript
-import 'cypress-wordpress-session';
+import "cypress-wordpress-session";
 
-const username = 'admin';
-const password = '123';
+const username = "admin";
+const password = "123";
 
 const options = {};
 
-describe('Admin: article', () => {
+describe("Admin: article", () => {
   beforeEach(() => {
     cy.wordpressSession(username, password, options);
   });
 
-  it('does something in wordpress', () => {
+  it("does something in wordpress", () => {
     // test code here
   });
 });
@@ -33,11 +35,11 @@ The only required parameters are `username` and `password`.
 
 ## Parameters
 
-| Name        | Type                                       | Default value       | Description                         |
-| ----------- | ------------------------------------------ | ------------------- | ----------------------------------- |
-| `username`  | string                                     | undefined           | Wordpress username                  |
-| `password`  | string                                     | undefined           | Wordpress password                  |
-| `options`   | object                                     | see table below     | Various options, see table below    |
+| Name       | Type   | Default value   | Description                      |
+| ---------- | ------ | --------------- | -------------------------------- |
+| `username` | string | undefined       | Wordpress username               |
+| `password` | string | undefined       | Wordpress password               |
+| `options`  | object | see table below | Various options, see table below |
 
 ### Options
 
