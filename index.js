@@ -67,14 +67,12 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
                 cwsLog('Wordpress cookie file found!');
 
-                const thisJsonLoginCookies = fullJson.users?.[username] || [];
-
-                if (!thisJsonLoginCookies.length) {
+                if (!fullJson.users || !fullJson.users[username]) {
                     cwsLog(`No session found for user ${username}`);
                     return;
                 }
 
-                savedLoginCookies = thisJsonLoginCookies;
+                savedLoginCookies = fullJson.users[username];
 
                 savedLoginCookies.forEach((cookie) => {
                     const {
