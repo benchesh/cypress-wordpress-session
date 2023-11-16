@@ -29,18 +29,17 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     }
 
     let fullJson = {};
-    let savedLoginCookies = [];
+    let currentJsonCookies = [];
     let cookiesFilepathExists = false;
 
-    cy.session([
-        username,
-        obscurePassword ? password.replace(/./g, '*') : password
-    ], () => {
+    // Get the current JSON and update currentJsonCookies accordingly
+    // When init is true, write these cookies to the browser
+    const getCurrentJsonCookies = (init = false) => {
         cy.exec(`echo stdout && [ -f ${cookiesFilepath} ] && echo "Cookie file found"`, { failOnNonZeroExit: false }).then((res) => {
             if (!res.stdout.includes('stdout')) {// if stdout doesn't work, we'll need an alternative method to check the file exists
                 cy.writeFile(cookiesFilepath, '', { flag: 'a+' });// ensures cy.readFile won't crash
             } else if (!res.stdout.includes('Cookie file found')) {
-                cwsLog('Wordpress cookie file not found...');
+                if (init) cwsLog('Wordpress cookie file not found...');
 
                 return;
             }
@@ -50,14 +49,14 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 null//read the file as a buffer, otherwise it will run parse it as if it were JSON, which will cause a crash if it's empty
             ).then((file) => {
                 if (!file.length) {// file is empty; act as if it doesn't exist!
-                    cwsLog(`Wordpress cookie file not found ("${cookiesFilepath}")...`);
+                    if (init) cwsLog(`Wordpress cookie file not found ("${cookiesFilepath}")...`);
                     return;
                 }
 
                 const thisJson = JSON.parse(file);
 
                 if (pkgVersion !== thisJson.pkgVersion) {
-                    cwsLog(`Wordpress cookie file found at "${cookiesFilepath}", but it's for a different version of ${pkgName}, so will be discarded!`);
+                    if (init) cwsLog(`Wordpress cookie file found at "${cookiesFilepath}", but it's for a different version of ${pkgName}, so will be discarded!`);
 
                     return;
                 }
@@ -65,16 +64,18 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 fullJson = thisJson;
                 cookiesFilepathExists = true;
 
-                cwsLog('Wordpress cookie file found!');
+                if (init) cwsLog('Wordpress cookie file found!');
 
                 if (!fullJson.users || !fullJson.users[username]) {
-                    cwsLog(`No session found for user ${username}`);
+                    if (init) cwsLog(`No session found for user ${username}`);
                     return;
                 }
 
-                savedLoginCookies = fullJson.users[username];
+                currentJsonCookies = fullJson.users[username];
 
-                savedLoginCookies.forEach((cookie) => {
+                if (!init) return;
+
+                currentJsonCookies.forEach((cookie) => {
                     const {
                         name, value, domain, httpOnly, path, secure,
                     } = cookie;
@@ -85,6 +86,13 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 });
             });
         });
+    }
+
+    cy.session([
+        username,
+        obscurePassword ? password.replace(/./g, '*') : password
+    ], () => {
+        getCurrentJsonCookies(true);
 
         cy.visit('/wp-admin');
 
@@ -92,7 +100,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
             if (url.includes('/wp-admin')) {
                 cwsLog('Wordpress session restored successfully!');
             } else if (url.includes('/wp-login')) {
-                if (savedLoginCookies) {
+                if (currentJsonCookies) {
                     cwsLog('Session restoration unsuccessful!');
                 }
 
@@ -116,7 +124,9 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 const browserLoginCookies = cookies.filter((cookie) => cookie.name.startsWith('wordpress_'));
 
                 if (browserLoginCookies) {
-                    const allLoginCookies = browserLoginCookies.concat(savedLoginCookies).map((cookie) => {
+                    getCurrentJsonCookies();//get the JSON file again in case it's already been changed elsewhere!
+
+                    const allLoginCookies = browserLoginCookies.concat(currentJsonCookies).map((cookie) => {
                         const {
                             name, value, domain, httpOnly, secure,
                         } = cookie;
@@ -126,10 +136,15 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                         };
                     });
 
+                    //get a list of unique domains from all of the cookies
                     const uniqueDomains = [...new Set(allLoginCookies.map((obj) => obj.domain))];
 
                     const uniqueLoginCookies = [];
 
+                    //Add all of the cookies for every domain to uniqueLoginCookies.
+                    //If any two cookies for a domain have the same name, only add the first one it finds.
+                    //Due to browserLoginCookies.concat(currentJsonCookies), the most recently saved cookies will always be the first ones.
+                    //We can then compare uniqueLoginCookies to currentJsonCookies to see if the cookies have changed.
                     uniqueDomains.forEach((domain) => {
                         const allCookiesForDomain = allLoginCookies.filter((cookie) => cookie.domain === domain)
 
@@ -140,7 +155,8 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                         });
                     });
 
-                    if (JSON.stringify(uniqueLoginCookies) !== JSON.stringify(savedLoginCookies)) {
+                    //The cookies have changed, so save the new list!
+                    if (JSON.stringify(uniqueLoginCookies) !== JSON.stringify(currentJsonCookies)) {
                         cy.writeFile(cookiesFilepath, JSON.stringify({
                             pkgVersion,
                             users: {
