@@ -106,9 +106,36 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
                 cwsLog(`Logging in to Wordpress as ${username}...`);
 
-                cy.wait(500); // make sure input box is loaded before we type. TODO: improve this
-                cy.get('input[name=log]').should('exist').clear().type(username, { delay: 0 });
-                cy.get('input[name=pwd]').should('exist').clear().type(`${password}{enter}`, { delay: 0 });
+                const inputText = (el, text, enter, isSensitive) => {
+                    cy.get(el).should('exist');
+                    cy.get(el).clear();
+                    cy.get(el).invoke('val').as('currentText');
+
+                    cy.get('@currentText').then((currentText) => {
+                        if (currentText !== '') { // workaround for a rare bug
+                            // eslint-disable-next-line cypress/no-unnecessary-waiting
+                            cy.wait(500);
+
+                            inputText(el, text, enter, isSensitive);
+                            return;
+                        }
+
+                        Cypress.log({
+                            $el: cy.get(el),
+                            name: 'type',
+                            message: isSensitive ? '*'.repeat(text.length) : text,
+                        });
+
+                        cy.get(el).type(
+                            `${text}${enter ? '{enter}' : ''}`,
+                            { delay: 0, log: false }
+                        );
+                    });
+                };
+
+                inputText('input[name=log]', username);
+                inputText('input[name=pwd]', password, true, obscurePassword);
+
                 cy.get('body').then(($body) => {
                     if ($body.find('#login_error').length) {
                         cwsErr('Wordpress login credentials are incorrect!');
