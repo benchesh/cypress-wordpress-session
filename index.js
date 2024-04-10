@@ -217,7 +217,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                     Cypress.session.clearAllSavedSessions();
 
                     if (allowRetry) {
-                        cwsErr(`The session was not restored successfully, as your desired landing page ${landingPage} has instead sent you back to the login screen.`);
+                        cwsLog('The session was not restored successfully, but will try one more time!')
 
                         cy.wordpressSession(username, password, {
                             cookiesFilepath,
@@ -228,7 +228,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                             allowRetry: false,
                         });
                     } else {
-                        cwsLog('The session was not restored successfully, but will try one more time!')
+                        cwsErr(`The session was not restored successfully, as your desired landing page ${landingPage} has instead sent you back to the login screen.`);
                     }
                 }
             });
