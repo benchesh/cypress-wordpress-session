@@ -3,7 +3,8 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     verboseLogging,
     landingPage = '/wp-admin',
     obscurePassword = true,
-    sessionOptions = { cacheAcrossSpecs: true }
+    sessionOptions = { cacheAcrossSpecs: true },
+    allowRetry = true,
 }) => {
     const {
         name: pkgName,
@@ -213,8 +214,22 @@ Cypress.Commands.add('wordpressSession', (username, password, {
         if (!urlOrPathIsLoginPage(landingPage)) {
             cy.url().then((url) => {
                 if (urlOrPathIsLoginPage(url)) {
-                    cwsErr(`The session was not restored successfully, as your desired landing page ${landingPage} has instead sent you back to the login screen. The session will now be cleared!`);
                     Cypress.session.clearAllSavedSessions();
+
+                    if (allowRetry) {
+                        cwsErr(`The session was not restored successfully, as your desired landing page ${landingPage} has instead sent you back to the login screen.`);
+
+                        cy.wordpressSession(username, password, {
+                            cookiesFilepath,
+                            verboseLogging,
+                            landingPage,
+                            obscurePassword,
+                            sessionOptions,
+                            allowRetry: false,
+                        });
+                    } else {
+                        cwsLog('The session was not restored successfully, but will try one more time!')
+                    }
                 }
             });
         }
