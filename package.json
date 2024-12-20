@@ -1,6 +1,6 @@
 {
   "name": "cypress-wordpress-session",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "description": "Restore a Wordpress session in Cypress by automatically saving Wordpress login cookies",
   "main": "index.js",
   "type": "commonjs",
@@ -18,7 +18,7 @@
     "url": "git+https://github.com/benchesh/cypress-wordpress-session.git"
   },
   "devDependencies": {
-    "eslint": "^9.13.0",
-    "eslint-plugin-cypress": "^4.0.0"
+    "eslint": "^9.17.0",
+    "eslint-plugin-cypress": "^4.1.0"
   }
 }

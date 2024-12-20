@@ -46,6 +46,7 @@ The only required parameters are `username` and `password`.
 | Name              | Type    | Default value                   | Description                                                                                                            |
 | ----------------- | ------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `cookiesFilepath` | string  | `.wordpress-login-cookies.json` | The location at which the cookies are saved & restored                                                                 |
+| `domain`          | string  | null                            | Override the domain.                                                                                                   |
 | `verboseLogging`  | boolean | false                           | Enable verbose logging                                                                                                 |
 | `landingPage`     | string  | `/wp-admin`                     | The page to land on once logged in or once the session has been restored. Can be set to a falsy value to prevent this. |
 | `obscurePassword` | boolean | true                            | Hide the password from the session parameters, thus preventing it from being easily viewable in the Cypress GUI        |

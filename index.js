@@ -5,6 +5,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     obscurePassword = true,
     sessionOptions = { cacheAcrossSpecs: true },
     allowRetry = true,
+    domain,
 }) => {
     const {
         name: pkgName,
@@ -27,6 +28,10 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
     if (!password) {
         cwsErr('No password supplied!')
+    }
+
+    if (domain?.endsWith('/')) {
+        domain = domain.substring(0, domain.length - 1)
     }
 
     let fullJson = {};
@@ -95,7 +100,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     ], () => {
         getCurrentJsonCookies(true);
 
-        cy.visit('/wp-admin');
+        cy.visit(`${domain ? domain : ''}/wp-admin`);
 
         cy.url().then((url) => {
             if (url.includes('/wp-admin')) {
@@ -205,7 +210,13 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     }, sessionOptions);
 
     if (landingPage) {
-        cy.visit(landingPage);
+        if (landingPage.startsWith('/')) {
+            cy.visit(`${domain ? domain : ''}${landingPage}`);
+        } else if(landingPage.includes('://')){
+            cy.visit(landingPage);
+        } else {
+            cy.visit(`${domain ? domain : ''}/${landingPage}`);
+        }
 
         const urlOrPathIsLoginPage = (urlOrPath) => {
             return new URL(urlOrPath, 'http://test/').pathname.startsWith('/wp-login');
