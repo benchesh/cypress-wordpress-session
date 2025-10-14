@@ -1,4 +1,4 @@
-import { generateToken } from 'authenticator';
+const { generateToken } = require('authenticator');
 
 Cypress.Commands.add('wordpressSession', (username, password, {
     authSecret,
