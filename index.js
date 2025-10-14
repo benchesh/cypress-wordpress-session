@@ -19,22 +19,22 @@ Cypress.Commands.add('wordpressSession', (username, password, {
         if (verboseLogging) {
             cy.log(`${pkgName}: ${str}`);
         }
-    }
+    };
 
     const cwsErr = (str) => {
-        throw new Error(`${pkgName} ERROR: ${str}`)
-    }
+        throw new Error(`${pkgName} ERROR: ${str}`);
+    };
 
     if (!username) {
-        cwsErr('No username supplied!')
+        cwsErr('No username supplied!');
     }
 
     if (!password) {
-        cwsErr('No password supplied!')
+        cwsErr('No password supplied!');
     }
 
     if (domain?.endsWith('/')) {
-        domain = domain.substring(0, domain.length - 1)
+        domain = domain.substring(0, domain.length - 1);
     }
 
     let fullJson = {};
@@ -45,7 +45,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     // When init is true, write these cookies to the browser
     const getCurrentJsonCookies = (init = false) => {
         cy.exec(`echo stdout && [ -f ${cookiesFilepath} ] && echo "Cookie file found"`, { failOnNonZeroExit: false }).then((res) => {
-            if (!res.stdout.includes('stdout')) {// if stdout doesn't work, we'll need an alternative method to check the file exists
+            if (!res.stdout.includes('stdout')) { // if stdout doesn't work, we'll need an alternative method to check the file exists
                 cy.writeFile(cookiesFilepath, '', { flag: 'a+' });// ensures cy.readFile won't crash
             } else if (!res.stdout.includes('Cookie file found')) {
                 if (init) cwsLog('Wordpress cookie file not found...');
@@ -55,9 +55,9 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
             cy.readFile(
                 cookiesFilepath,
-                null//read the file as a buffer, otherwise it will run parse it as if it were JSON, which will cause a crash if it's empty
+                null, // read the file as a buffer, otherwise it will run parse it as if it were JSON, which will cause a crash if it's empty
             ).then((file) => {
-                if (!file.length) {// file is empty; act as if it doesn't exist!
+                if (!file.length) { // file is empty; act as if it doesn't exist!
                     if (init) cwsLog(`Wordpress cookie file not found ("${cookiesFilepath}")...`);
                     return;
                 }
@@ -95,15 +95,15 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 });
             });
         });
-    }
+    };
 
     cy.session([
         username,
-        obscurePassword ? password.replace(/./g, '*') : password
+        obscurePassword ? password.replace(/./g, '*') : password,
     ], () => {
         getCurrentJsonCookies(true);
 
-        cy.visit(`${domain ? domain : ''}/wp-admin`);
+        cy.visit(`${domain || ''}/wp-admin`);
 
         cy.url().then((url) => {
             if (url.includes('/wp-admin')) {
@@ -137,7 +137,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
                         cy.get(el).type(
                             `${text}${enter ? '{enter}' : ''}`,
-                            { delay: 0, log: false }
+                            { delay: 0, log: false },
                         );
                     });
                 };
@@ -170,7 +170,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 const browserLoginCookies = cookies.filter((cookie) => cookie.name.startsWith('wordpress_'));
 
                 if (browserLoginCookies) {
-                    getCurrentJsonCookies();//get the JSON file again in case it's already been changed elsewhere!
+                    getCurrentJsonCookies();// get the JSON file again in case it's already been changed elsewhere!
 
                     const allLoginCookies = browserLoginCookies.concat(currentJsonCookies).map((cookie) => {
                         const {
@@ -182,17 +182,17 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                         };
                     });
 
-                    //get a list of unique domains from all of the cookies
+                    // get a list of unique domains from all of the cookies
                     const uniqueDomains = [...new Set(allLoginCookies.map((obj) => obj.domain))];
 
                     const uniqueLoginCookies = [];
 
-                    //Add all of the cookies for every domain to uniqueLoginCookies.
-                    //If any two cookies for a domain have the same name, only add the first one it finds.
-                    //Due to browserLoginCookies.concat(currentJsonCookies), the most recently saved cookies will always be the first ones.
-                    //We can then compare uniqueLoginCookies to currentJsonCookies to see if the cookies have changed.
+                    // Add all of the cookies for every domain to uniqueLoginCookies.
+                    // If any two cookies for a domain have the same name, only add the first one it finds.
+                    // Due to browserLoginCookies.concat(currentJsonCookies), the most recently saved cookies will always be the first ones.
+                    // We can then compare uniqueLoginCookies to currentJsonCookies to see if the cookies have changed.
                     uniqueDomains.forEach((domain) => {
-                        const allCookiesForDomain = allLoginCookies.filter((cookie) => cookie.domain === domain)
+                        const allCookiesForDomain = allLoginCookies.filter((cookie) => cookie.domain === domain);
 
                         allCookiesForDomain.forEach((cookie) => {
                             if (!uniqueLoginCookies.find((uCookie) => uCookie.name === cookie.name)) {
@@ -201,7 +201,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                         });
                     });
 
-                    //The cookies have changed, so save the new list!
+                    // The cookies have changed, so save the new list!
                     if (JSON.stringify(uniqueLoginCookies) !== JSON.stringify(currentJsonCookies)) {
                         cy.writeFile(cookiesFilepath, JSON.stringify({
                             pkgVersion,
@@ -224,16 +224,14 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
     if (landingPage) {
         if (landingPage.startsWith('/')) {
-            cy.visit(`${domain ? domain : ''}${landingPage}`);
-        } else if(landingPage.includes('://')){
+            cy.visit(`${domain || ''}${landingPage}`);
+        } else if (landingPage.includes('://')) {
             cy.visit(landingPage);
         } else {
-            cy.visit(`${domain ? domain : ''}/${landingPage}`);
+            cy.visit(`${domain || ''}/${landingPage}`);
         }
 
-        const urlOrPathIsLoginPage = (urlOrPath) => {
-            return new URL(urlOrPath, 'http://test/').pathname.startsWith('/wp-login');
-        }
+        const urlOrPathIsLoginPage = (urlOrPath) => new URL(urlOrPath, 'http://test/').pathname.startsWith('/wp-login');
 
         if (!urlOrPathIsLoginPage(landingPage)) {
             cy.url().then((url) => {
@@ -241,7 +239,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                     Cypress.session.clearAllSavedSessions();
 
                     if (allowRetry) {
-                        cwsLog('The session was not restored successfully, but will try one more time!')
+                        cwsLog('The session was not restored successfully, but will try one more time!');
 
                         cy.wordpressSession(username, password, {
                             cookiesFilepath,
