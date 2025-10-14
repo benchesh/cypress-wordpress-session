@@ -1,4 +1,7 @@
+import { generateToken } from 'authenticator';
+
 Cypress.Commands.add('wordpressSession', (username, password, {
+    authSecret,
     cookiesFilepath = '.wordpress-login-cookies.json',
     verboseLogging,
     landingPage = '/wp-admin',
@@ -145,6 +148,16 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 cy.get('body').then(($body) => {
                     if ($body.find('#login_error').length) {
                         cwsErr('Wordpress login credentials are incorrect!');
+                    } else if ($body.find('input[name=googleotp]').length) {
+                        if (!authSecret) {
+                            cwsErr('An auth secret is needed to complete the 2FA login!');
+                        } else {
+                            inputText('input[name=googleotp]', generateToken(authSecret), true, obscurePassword);
+
+                            if ($body.find('#login_error').length) {
+                                cwsErr('The auth secret for the 2FA login is incorrect!');
+                            }
+                        }
                     }
                 });
             } else {

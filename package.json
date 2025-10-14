@@ -18,7 +18,10 @@
     "url": "git+https://github.com/benchesh/cypress-wordpress-session.git"
   },
   "devDependencies": {
-    "eslint": "^9.17.0",
-    "eslint-plugin-cypress": "^4.1.0"
+    "eslint": "^9.37.0",
+    "eslint-plugin-cypress": "^5.2.0"
+  },
+  "dependencies": {
+    "authenticator": "^1.1.5"
   }
 }
