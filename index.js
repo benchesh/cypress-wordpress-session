@@ -1,4 +1,4 @@
-const { generateToken } = require('authenticator');
+const OTPAuth = require('otpauth');
 
 Cypress.Commands.add('wordpressSession', (username, password, {
     authSecret,
@@ -152,7 +152,8 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                         if (!authSecret) {
                             cwsErr('An auth secret is needed to complete the 2FA login!');
                         } else {
-                            inputText('input[name=googleotp]', generateToken(authSecret), true, obscurePassword);
+                            const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(authSecret) });
+                            inputText('input[name=googleotp]', totp.generate(), true, obscurePassword);
 
                             if ($body.find('#login_error').length) {
                                 cwsErr('The auth secret for the 2FA login is incorrect!');
