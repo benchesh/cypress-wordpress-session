@@ -6,6 +6,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     verboseLogging,
     landingPage = '/wp-admin',
     obscurePassword = true,
+    useSession = true,
     sessionOptions = { cacheAcrossSpecs: true },
     allowRetry = true,
     domain,
@@ -97,10 +98,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
         });
     };
 
-    cy.session([
-        username,
-        obscurePassword ? password.replace(/./g, '*') : password,
-    ], () => {
+    const setup = () => {
         getCurrentJsonCookies(true);
 
         cy.visit(`${domain || ''}/wp-admin`);
@@ -221,7 +219,16 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 }
             });
         });
-    }, sessionOptions);
+    };
+
+    if (useSession) {
+        cy.session([
+            username,
+            obscurePassword ? password.replace(/./g, '*') : password,
+        ], setup, sessionOptions);
+    } else {
+        setup();
+    }
 
     if (landingPage) {
         if (landingPage.startsWith('/')) {
@@ -247,6 +254,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                             verboseLogging,
                             landingPage,
                             obscurePassword,
+                            useSession,
                             sessionOptions,
                             allowRetry: false,
                         });

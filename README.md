@@ -51,4 +51,5 @@ The only required parameters are `username` and `password`.
 | `verboseLogging`  | boolean | false                           | Enable verbose logging                                                                                                         |
 | `landingPage`     | string  | `/wp-admin`                     | The page to land on once logged in or once the session has been restored. Can be set to a falsy value to prevent this.         |
 | `obscurePassword` | boolean | true                            | Hide the password/2FA OTP from the session parameters & logs, thus preventing it from being easily viewable in the Cypress GUI |
+| `useSession`      | boolean | true                            | When set to `false`, bypasses `cy.session()` and restores cookies using the JSON file / logs in from scratch on every call     |
 | `sessionOptions`  | object  | { cacheAcrossSpecs: true }      | Cypress session options (see [Cypress docs](https://docs.cypress.io/api/commands/session))                                     |
