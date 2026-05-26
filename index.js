@@ -9,7 +9,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     useSession = true,
     sessionOptions = { cacheAcrossSpecs: true },
     allowRetry = true,
-    domain,
+    domain
 }) => {
     const {
         name: pkgName,
@@ -49,7 +49,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
             if (!res.stdout.includes('stdout')) { // if stdout doesn't work, we'll need an alternative method to check the file exists
                 cy.writeFile(cookiesFilepath, '', { flag: 'a+' });// ensures cy.readFile won't crash
             } else if (!res.stdout.includes('Cookie file found')) {
-                if (init) cwsLog('Wordpress cookie file not found...');
+                if (init) cwsLog('WordPress cookie file not found...');
 
                 return;
             }
@@ -59,14 +59,14 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 null, // read the file as a buffer, otherwise it will run parse it as if it were JSON, which will cause a crash if it's empty
             ).then((file) => {
                 if (!file.length) { // file is empty; act as if it doesn't exist!
-                    if (init) cwsLog(`Wordpress cookie file not found ("${cookiesFilepath}")...`);
+                    if (init) cwsLog(`WordPress cookie file not found ("${cookiesFilepath}")...`);
                     return;
                 }
 
                 const thisJson = JSON.parse(file);
 
                 if (pkgVersion !== thisJson.pkgVersion) {
-                    if (init) cwsLog(`Wordpress cookie file found at "${cookiesFilepath}", but it's for a different version of ${pkgName}, so will be discarded!`);
+                    if (init) cwsLog(`WordPress cookie file found at "${cookiesFilepath}", but it's for a different version of ${pkgName}, so will be discarded!`);
 
                     return;
                 }
@@ -74,7 +74,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                 fullJson = thisJson;
                 cookiesFilepathExists = true;
 
-                if (init) cwsLog('Wordpress cookie file found!');
+                if (init) cwsLog('WordPress cookie file found!');
 
                 if (!fullJson.users || !fullJson.users[username]) {
                     if (init) cwsLog(`No session found for user ${username}`);
@@ -87,11 +87,11 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
                 currentJsonCookies.forEach((cookie) => {
                     const {
-                        name, value, domain, httpOnly, path, secure,
+                        name, value, domain, httpOnly, path, secure
                     } = cookie;
 
                     cy.setCookie(name, value, {
-                        domain, httpOnly, path, secure,
+                        domain, httpOnly, path, secure
                     });
                 });
             });
@@ -105,13 +105,13 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
         cy.url().then((url) => {
             if (url.includes('/wp-admin')) {
-                cwsLog('Wordpress session restored successfully!');
+                cwsLog('WordPress session restored successfully!');
             } else if (url.includes('/wp-login')) {
                 if (currentJsonCookies) {
                     cwsLog('Session restoration unsuccessful!');
                 }
 
-                cwsLog(`Logging in to Wordpress as ${username}...`);
+                cwsLog(`Logging in to WordPress as ${username}...`);
 
                 const inputText = (el, text, enter, isSensitive) => {
                     cy.get(el).should('exist');
@@ -130,7 +130,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                         Cypress.log({
                             $el: cy.get(el),
                             name: 'type',
-                            message: isSensitive ? '*'.repeat(text.length) : text,
+                            message: isSensitive ? '*'.repeat(text.length) : text
                         });
 
                         cy.get(el).type(
@@ -140,27 +140,41 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                     });
                 };
 
-                inputText('input[name=log]', username);
-                inputText('input[name=pwd]', password, true, obscurePassword);
+                inputText('input[name=log]:not([type=hidden])', username);
+                inputText('input[name=pwd]:not([type=hidden])', password, true, obscurePassword);
 
-                cy.get('body').then(($body) => {
-                    if ($body.find('#login_error').length) {
-                        cwsErr('Wordpress login credentials are incorrect!');
-                    } else if ($body.find('input[name=googleotp]').length) {
-                        if (!authSecret) {
-                            cwsErr('An auth secret is needed to complete the 2FA login!');
-                        } else {
-                            const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(authSecret) });
-                            inputText('input[name=googleotp]', totp.generate(), true, obscurePassword);
+                (function verifyLogin(retries = 0) {
+                    cy.get('body').then(($body) => {
+                        if ($body.find('#login_error').length) {
+                            cwsErr('WordPress login credentials are incorrect!');
+                        } else if ($body.find('input[name=googleotp]').length) {
+                            if (!authSecret) {
+                                cwsErr('An auth secret is needed to complete the 2FA login!');
+                            } else {
+                                const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(authSecret) });
+                                inputText('input[name=googleotp]', totp.generate(), true, obscurePassword);
 
-                            if ($body.find('#login_error').length) {
-                                cwsErr('The auth secret for the 2FA login is incorrect!');
+                                if ($body.find('#login_error').length) {
+                                    cwsErr('The auth secret for the 2FA login is incorrect!');
+                                }
+                            }
+                        } else if ($body.find('input[name=log]:not([type=hidden])')) {
+                            // if we can still see the username field, the login page probably needs a bit longer to respond.
+                            // In most cases this won't be an issue, but in some cases (eg. slow CI machines) it might be,
+                            // so we'll add a retry mechanism just in case!
+                            if (retries < 50) {
+                                // eslint-disable-next-line cypress/no-unnecessary-waiting
+                                cy.wait(100);
+                                cwsLog(`Login not successful yet, retrying (${retries + 1})`);
+                                verifyLogin(retries + 1);
+                            } else {
+                                cwsErr('WordPress login couldn\'t be verified after multiple attempts!');
                             }
                         }
-                    }
-                });
+                    });
+                })();
             } else {
-                cwsErr('Wordpress login failed!');
+                cwsErr('WordPress login failed!');
             }
         });
 
@@ -173,11 +187,11 @@ Cypress.Commands.add('wordpressSession', (username, password, {
 
                     const allLoginCookies = browserLoginCookies.concat(currentJsonCookies).map((cookie) => {
                         const {
-                            name, value, domain, httpOnly, secure,
+                            name, value, domain, httpOnly, secure
                         } = cookie;
 
                         return {
-                            name, value, domain, httpOnly, secure,
+                            name, value, domain, httpOnly, secure
                         };
                     });
 
@@ -206,14 +220,14 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                             pkgVersion,
                             users: {
                                 ...fullJson.users,
-                                [username]: uniqueLoginCookies,
-                            },
+                                [username]: uniqueLoginCookies
+                            }
                         }, null, 4));
 
                         if (cookiesFilepathExists) {
-                            cwsLog(`Updated Wordpress cookies file at "${cookiesFilepath}".`);
+                            cwsLog(`Updated WordPress cookies file at "${cookiesFilepath}".`);
                         } else {
-                            cwsLog(`Saved new Wordpress cookies file at "${cookiesFilepath}".`);
+                            cwsLog(`Saved new WordPress cookies file at "${cookiesFilepath}".`);
                         }
                     }
                 }
@@ -224,7 +238,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
     if (useSession) {
         cy.session([
             username,
-            obscurePassword ? password.replace(/./g, '*') : password,
+            obscurePassword ? password.replace(/./g, '*') : password
         ], setup, sessionOptions);
     } else {
         setup();
@@ -256,7 +270,7 @@ Cypress.Commands.add('wordpressSession', (username, password, {
                             obscurePassword,
                             useSession,
                             sessionOptions,
-                            allowRetry: false,
+                            allowRetry: false
                         });
                     } else {
                         cwsErr(`The session was not restored successfully, as your desired landing page ${landingPage} has instead sent you back to the login screen.`);
